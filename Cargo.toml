@@ -1,40 +1,3 @@
-[package]
-name = "rt-evm"
-version = "0.2.0"
-edition = "2021"
-
-[dependencies]
-ruc = { workspace = true }
-vsdb = { workspace = true }
-once_cell = { workspace = true }
-bcs = { workspace = true }
-
-rt-evm-api = { workspace = true }
-rt-evm-mempool = { workspace = true }
-rt-evm-executor = { workspace = true }
-rt-evm-storage = { workspace = true }
-rt-evm-blockmgmt = { workspace = true }
-rt-evm-model = { workspace = true }
-
-tokio = { workspace = true }
-
-[dev-dependencies]
-
-[[example]]
-name = "demo"
-crate-type = ["bin"]
-
-[features]
-default = ["vsdb_bcs_codec"]
-benchmark = ["rt-evm-api/benchmark", "rt-evm-executor/benchmark", "rt-evm-mempool/benchmark"]
-
-poa = ["rt-evm-executor/poa"]
-pos = ["rt-evm-executor/pos"]
-
-vsdb_bcs_codec = ["rt-evm-storage/vsdb_bcs_codec"]
-vsdb_json_codec = ["rt-evm-storage/vsdb_json_codec"]
-vsdb_msgpack_codec = ["rt-evm-storage/vsdb_msgpack_codec"]
-
 [workspace]
 members = [
     "crates/api",
@@ -105,3 +68,43 @@ vsdb_trie_db = "0.5.0"
 
 vsdb_trie_map = "0.3.0"
 # vsdb_trie_map = { path = "../vsdb/utils/trie_map" }
+
+#####################################################################################
+#####################################################################################
+
+[package]
+name = "rt-evm"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies]
+ruc = { workspace = true }
+vsdb = { workspace = true }
+once_cell = { workspace = true }
+bcs = { workspace = true }
+
+rt-evm-api = { workspace = true }
+rt-evm-mempool = { workspace = true }
+rt-evm-executor = { workspace = true }
+rt-evm-storage = { workspace = true }
+rt-evm-blockmgmt = { workspace = true }
+rt-evm-model = { workspace = true }
+
+tokio = { workspace = true }
+
+[dev-dependencies]
+
+[[example]]
+name = "demo"
+crate-type = ["bin"]
+
+[features]
+default = ["vsdb_bcs_codec"]
+benchmark = ["rt-evm-api/benchmark", "rt-evm-executor/benchmark", "rt-evm-mempool/benchmark"]
+
+poa = ["rt-evm-executor/poa"]
+pos = ["rt-evm-executor/pos"]
+
+vsdb_bcs_codec = ["rt-evm-storage/vsdb_bcs_codec"]
+vsdb_json_codec = ["rt-evm-storage/vsdb_json_codec"]
+vsdb_msgpack_codec = ["rt-evm-storage/vsdb_msgpack_codec"]
