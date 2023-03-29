@@ -1,0 +1,16 @@
+[package]
+name = "rt-evm-poa"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rt-evm-pos = { workspace = true }
+
+ruc = { workspace = true }
+vsdb_trie_map = { workspace = true }
+
+rand = { workspace = true }
+ed25519-zebra = { workspace = true }
+
+bcs = { workspace = true }
+serde = { workspace = true }

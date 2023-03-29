@@ -3,7 +3,7 @@
 #![allow(clippy::uninlined_format_args, clippy::box_default)]
 
 pub mod adapter;
-mod precompiles;
+pub mod precompiles;
 mod utils;
 
 use crate::precompiles::build_precompile_set;

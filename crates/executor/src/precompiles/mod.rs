@@ -1,20 +1,14 @@
-mod blake2_f;
-mod ec_add;
-mod ec_mul;
-mod ec_pairing;
-mod ecrecover;
-mod identity;
-mod modexp;
-mod ripemd160;
-mod rsa;
-mod secp256r1;
-mod sha256;
-
-#[cfg(feature = "poa")]
-mod poa;
-
-#[cfg(feature = "pos")]
-mod pos;
+pub mod blake2_f;
+pub mod ec_add;
+pub mod ec_mul;
+pub mod ec_pairing;
+pub mod ecrecover;
+pub mod identity;
+pub mod modexp;
+pub mod ripemd160;
+pub mod rsa;
+pub mod secp256r1;
+pub mod sha256;
 
 use std::collections::BTreeMap;
 
@@ -92,12 +86,14 @@ pub fn build_precompile_set() -> BTreeMap<H160, PrecompileFn> {
 
     #[cfg(feature = "poa")]
     {
-        ret.insert(TODO);
+        // TODO
+        // ret.insert();
     }
 
     #[cfg(feature = "pos")]
     {
-        ret.insert(TODO);
+        // TODO
+        // ret.insert();
     }
 
     ret

@@ -1,0 +1,10 @@
+[package]
+name = "rt-evm-pos"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ruc = { workspace = true }
+bcs = { workspace = true }
+serde = { workspace = true }
+vsdb_trie_map = { workspace = true }

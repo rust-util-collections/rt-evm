@@ -1,10 +1,10 @@
 pub mod cosig;
 
-use super::pos::{
-    Amount, Power, Punishment, Score, StakerIDRef, Staking, ValidatorID, ValidatorIDRef,
-    ValidatorW as Validator,
-};
 use cosig::{CoSigChecker, CoSigOp, CoSigRule, ValidatorPubKey};
+use rt_evm_pos::{
+    Amount, Power, Punishment, Score, StakerIDRef, Staking, Validator, ValidatorID,
+    ValidatorIDRef,
+};
 use ruc::{crypto::hash, *};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fmt::Debug};
@@ -53,14 +53,6 @@ impl Auth {
         Ok(me)
     }
 
-    pub fn validator_cap(&self) -> u32 {
-        self.staking.validator_cap()
-    }
-
-    pub fn set_validator_cap(&mut self, n: u32) {
-        self.staking.set_validator_cap(n);
-    }
-
     pub fn root(&self) -> TrieHash {
         self.root
     }
@@ -73,6 +65,14 @@ impl Auth {
             &self.staking.commit(),
         ]);
         self.root
+    }
+
+    pub fn validator_cap(&self) -> u32 {
+        self.staking.validator_cap()
+    }
+
+    pub fn set_validator_cap(&mut self, n: u32) {
+        self.staking.set_validator_cap(n);
     }
 
     /// Do a full replacement for the current validator set
@@ -120,11 +120,11 @@ impl Auth {
     }
 
     pub fn get_validators(&self) -> Result<Vec<Validator>> {
-        self.staking.get_w_validators().c(d!())
+        self.staking.get_validators().c(d!())
     }
 
     pub fn get_validator(&self, id: ValidatorIDRef) -> Result<Validator> {
-        self.staking.get_w_validator(id).c(d!())
+        self.staking.get_validator(id).c(d!())
     }
 
     /// NOTE:
@@ -165,15 +165,15 @@ impl Auth {
     }
 
     pub fn get_validator_score(&self, id: ValidatorIDRef) -> Result<Score> {
-        self.staking.get_validator_score(id).c(d!())
+        self.staking.get_vldtor_score(id).c(d!())
     }
 
     pub fn get_validator_staking_total(&self, id: ValidatorIDRef) -> Result<Amount> {
-        self.staking.get_validator_staking_total(id).c(d!())
+        self.staking.get_vldtor_staking_total(id).c(d!())
     }
 
     pub fn get_validator_power(&self, id: ValidatorIDRef) -> Result<Amount> {
-        self.staking.get_validator_power(id).c(d!())
+        self.staking.get_vldtor_power(id).c(d!())
     }
 
     pub fn validator_in_formal_list(&self, id: ValidatorIDRef) -> Result<bool> {
@@ -184,6 +184,7 @@ impl Auth {
         self.staking.validator_formal_list().c(d!())
     }
 
+    /// NOTE: system usage only
     pub fn governance_with_each_block(
         &mut self,
         governances: Vec<Punishment>,

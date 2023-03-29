@@ -40,13 +40,17 @@ macro_rules! from_be_bytes {
 }
 
 pub struct Staking {
-    // validator id => Validator { staker id => amount, .. }
+    // validator id => Vldtor { staker id => amount, .. }
     state: TrieMap,
 
     config: Config,
 }
 
 impl Staking {
+    pub fn new_default() -> Result<Self> {
+        Self::new(None, None, None, None).c(d!())
+    }
+
     pub fn new(
         score_max: Option<Score>,
         score_min_for_offline: Option<Score>,
@@ -68,15 +72,20 @@ impl Staking {
         Ok(me)
     }
 
-    pub fn new_default() -> Result<Self> {
-        Self::new(None, None, None, None).c(d!())
+    pub fn root(&self) -> TrieHash {
+        self.state.root()
+    }
+
+    /// Call this API after all changes
+    pub fn commit(&mut self) -> TrieHash {
+        self.state.commit()
     }
 
     pub fn score_max(&self) -> Score {
         self.config.score_max
     }
 
-    pub fn score_min_for_offline(&self) -> Score {
+    fn score_min_for_offline(&self) -> Score {
         self.config.score_min_for_offline
     }
 
@@ -88,58 +97,49 @@ impl Staking {
         self.config.validator_cap = n;
     }
 
-    pub fn root(&self) -> TrieHash {
-        self.state.root()
-    }
-
-    /// Call this API after all changes
-    pub fn commit(&mut self) -> TrieHash {
-        self.state.commit()
-    }
-
     /// Do a full replacement for the current validator set
     pub fn refresh_validators(
         &mut self,
-        validators: &BTreeMap<ValidatorID, ValidatorW>,
+        validators: &BTreeMap<ValidatorID, Validator>,
     ) -> Result<()> {
         self.state.clear().c(d!())?;
         for (id, v) in validators.iter() {
-            let v = Validator::try_from(v).c(d!())?;
+            let v = Vldtor::try_from(v).c(d!())?;
             self.state.insert(id, &v.to_bytes()).c(d!())?;
         }
         Ok(())
     }
 
-    fn get_validators(&self) -> Result<Vec<Validator>> {
+    fn get_vldtors(&self) -> Result<Vec<Vldtor>> {
         let mut ret = vec![];
         for i in self.state.ro_handle(self.state.root()).iter() {
             let (_, v) = i.c(d!())?;
-            let v = Validator::from_bytes(&v).c(d!())?;
+            let v = Vldtor::from_bytes(&v).c(d!())?;
             ret.push(v);
         }
         Ok(ret)
     }
 
-    fn get_validator(&self, id: ValidatorIDRef) -> Result<Validator> {
+    fn get_vldtor(&self, id: ValidatorIDRef) -> Result<Vldtor> {
         self.state
             .get(id)
             .c(d!())?
             .c(d!("not found"))
-            .and_then(|v| Validator::from_bytes(&v).c(d!()))
+            .and_then(|v| Vldtor::from_bytes(&v).c(d!()))
     }
 
-    pub fn get_w_validators(&self) -> Result<Vec<ValidatorW>> {
+    pub fn get_validators(&self) -> Result<Vec<Validator>> {
         let mut ret = vec![];
-        for v in self.get_validators().c(d!())?.iter() {
-            ret.push(ValidatorW::try_from(v).c(d!())?);
+        for v in self.get_vldtors().c(d!())?.iter() {
+            ret.push(Validator::try_from(v).c(d!())?);
         }
         Ok(ret)
     }
 
-    pub fn get_w_validator(&self, id: ValidatorIDRef) -> Result<ValidatorW> {
-        self.get_validator(id)
+    pub fn get_validator(&self, id: ValidatorIDRef) -> Result<Validator> {
+        self.get_vldtor(id)
             .c(d!())
-            .and_then(|v| ValidatorW::try_from(&v).c(d!()))
+            .and_then(|v| Validator::try_from(&v).c(d!()))
     }
 
     /// NOTE:
@@ -155,12 +155,12 @@ impl Staking {
         alt!(0 == amount, return Ok(()));
 
         let mut v = if let Some(v) = self.state.get(validator).c(d!())? {
-            Validator::from_bytes(&v).c(d!())?
+            Vldtor::from_bytes(&v).c(d!())?
         } else if static_validator_set {
             // POA
             return Err(eg!("The target validator not found!"));
         } else {
-            Validator::new(validator.to_vec(), None).c(d!())?
+            Vldtor::new(validator.to_vec(), None).c(d!())?
         };
 
         v.staking_total = v.staking_total.checked_add(amount).c(d!())?;
@@ -201,8 +201,8 @@ impl Staking {
             .state
             .get(validator)
             .c(d!())?
-            .c(d!("Validator does not exist"))
-            .and_then(|v| Validator::from_bytes(&v).c(d!()))?;
+            .c(d!("Vldtor does not exist"))
+            .and_then(|v| Vldtor::from_bytes(&v).c(d!()))?;
 
         if 0 > v.score {
             return Err(eg!(
@@ -260,7 +260,7 @@ impl Staking {
     /// this function only executes the logic directly related to staking,
     /// and it is not responsible for checking gas, nonce, blance, etc.
     pub fn unstake_all(&mut self, staker: StakerIDRef) -> Result<Amount> {
-        let mut validators = self.get_validators().c(d!())?;
+        let mut validators = self.get_vldtors().c(d!())?;
 
         let mut amount: Amount = 0;
         for v in validators.iter_mut() {
@@ -295,16 +295,16 @@ impl Staking {
         Ok(amount)
     }
 
-    pub fn get_validator_score(&self, id: ValidatorIDRef) -> Result<Score> {
-        self.get_validator(id).c(d!()).map(|v| v.score)
+    pub fn get_vldtor_score(&self, id: ValidatorIDRef) -> Result<Score> {
+        self.get_vldtor(id).c(d!()).map(|v| v.score)
     }
 
-    pub fn get_validator_staking_total(&self, id: ValidatorIDRef) -> Result<Amount> {
-        self.get_validator(id).c(d!()).map(|v| v.staking_total)
+    pub fn get_vldtor_staking_total(&self, id: ValidatorIDRef) -> Result<Amount> {
+        self.get_vldtor(id).c(d!()).map(|v| v.staking_total)
     }
 
-    pub fn get_validator_power(&self, id: ValidatorIDRef) -> Result<Amount> {
-        self.get_validator(id).c(d!()).map(|v| v.voting_power())
+    pub fn get_vldtor_power(&self, id: ValidatorIDRef) -> Result<Amount> {
+        self.get_vldtor(id).c(d!()).map(|v| v.voting_power())
     }
 
     pub fn validator_in_formal_list(&self, id: ValidatorIDRef) -> Result<bool> {
@@ -325,9 +325,9 @@ impl Staking {
     }
 
     // TODO: implement a pre-sorted cache for better performance
-    fn validator_power_top_n(&self, n: u32) -> Result<Vec<(Validator, Power)>> {
-        let mut validators = self
-            .get_validators()
+    fn validator_power_top_n(&self, n: u32) -> Result<Vec<(Vldtor, Power)>> {
+        let mut vldtors = self
+            .get_vldtors()
             .c(d!())?
             .into_iter()
             .map(|v| {
@@ -337,10 +337,10 @@ impl Staking {
             .filter(|(_, power)| 0 < *power)
             .collect::<Vec<_>>();
 
-        validators.sort_unstable_by(|a, b| b.1.cmp(&a.1));
-        validators.truncate(n as usize);
+        vldtors.sort_unstable_by(|a, b| b.1.cmp(&a.1));
+        vldtors.truncate(n as usize);
 
-        Ok(validators)
+        Ok(vldtors)
     }
 
     // Unconditional increment
@@ -360,11 +360,11 @@ impl Staking {
         let score_max = self.score_max();
 
         if let Some(id) = id {
-            let mut v = self.get_validator(id).c(d!())?;
+            let mut v = self.get_vldtor(id).c(d!())?;
             v.score_incr_by_n(n, score_max);
             self.state.insert(id, &v.to_bytes()).c(d!())?;
         } else {
-            for v in self.get_validators().c(d!())?.iter_mut() {
+            for v in self.get_vldtors().c(d!())?.iter_mut() {
                 v.score_incr_by_n(n, score_max);
                 self.state.insert(&v.id, &v.to_bytes()).c(d!())?;
             }
@@ -374,7 +374,7 @@ impl Staking {
     }
 
     fn validator_score_decr_by_offline(&mut self, id: ValidatorIDRef) -> Result<()> {
-        self.validator_score_decr_by_n(id, Validator::score_decr_for_offline(), true)
+        self.validator_score_decr_by_n(id, Vldtor::score_decr_for_offline(), true)
             .c(d!())
     }
 
@@ -382,7 +382,7 @@ impl Staking {
     fn validator_score_decr_by_punishment(&mut self, id: ValidatorIDRef) -> Result<()> {
         self.validator_score_decr_by_n(
             id,
-            Validator::score_decr_for_punishment(self.score_max()),
+            Vldtor::score_decr_for_punishment(self.score_max()),
             false,
         )
         .c(d!())
@@ -400,7 +400,7 @@ impl Staking {
             None
         };
 
-        let mut v = self.get_validator(id).c(d!())?;
+        let mut v = self.get_vldtor(id).c(d!())?;
         v.score_decr_by_n(n, min_in_offline);
         self.state.insert(id, &v.to_bytes()).c(d!())
     }
@@ -427,6 +427,7 @@ impl Staking {
         Ok(())
     }
 
+    /// NOTE: system usage only
     pub fn governance_with_each_block(
         &mut self,
         governances: Vec<Punishment>,
@@ -437,7 +438,7 @@ impl Staking {
     }
 }
 
-struct Validator {
+struct Vldtor {
     id: ValidatorID,
     score: Score,
 
@@ -448,7 +449,7 @@ struct Validator {
     storage: TrieMap,
 }
 
-impl Validator {
+impl Vldtor {
     fn new(id: ValidatorID, score: Option<Score>) -> Result<Self> {
         Ok(Self {
             id,
@@ -528,7 +529,7 @@ impl Validator {
     }
 }
 
-impl Serialize for Validator {
+impl Serialize for Vldtor {
     fn serialize<S>(&self, serializer: S) -> StdResult<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -537,7 +538,7 @@ impl Serialize for Validator {
     }
 }
 
-impl<'de> Deserialize<'de> for Validator {
+impl<'de> Deserialize<'de> for Vldtor {
     fn deserialize<D>(deserializer: D) -> StdResult<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -548,15 +549,15 @@ impl<'de> Deserialize<'de> for Validator {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ValidatorW {
+pub struct Validator {
     pub id: ValidatorID,
     pub score: Score,
     pub storage: BTreeMap<StakerID, Amount>,
 }
 
-impl TryFrom<&ValidatorW> for Validator {
+impl TryFrom<&Validator> for Vldtor {
     type Error = Box<dyn ruc::RucError>;
-    fn try_from(t: &ValidatorW) -> Result<Validator> {
+    fn try_from(t: &Validator) -> Result<Vldtor> {
         let staking_total = t.storage.values().sum();
         let mut storage = TrieMap::create(None).c(d!())?;
         for (id, am) in t.storage.iter() {
@@ -574,9 +575,9 @@ impl TryFrom<&ValidatorW> for Validator {
     }
 }
 
-impl TryFrom<&Validator> for ValidatorW {
+impl TryFrom<&Vldtor> for Validator {
     type Error = Box<dyn ruc::RucError>;
-    fn try_from(t: &Validator) -> Result<ValidatorW> {
+    fn try_from(t: &Vldtor) -> Result<Validator> {
         let mut storage = BTreeMap::new();
         for i in t.storage.ro_handle(t.storage.root()).iter() {
             let (id, am) = i.c(d!())?;
