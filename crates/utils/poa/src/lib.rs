@@ -24,6 +24,7 @@ pub struct Auth {
 }
 
 impl Auth {
+    /// NOTE: native usage only
     pub fn new(
         committee: BTreeMap<ValidatorID, ValidatorWeight>,
         cosig_rule: Option<CoSigRule>,
@@ -184,7 +185,7 @@ impl Auth {
         self.staking.validator_formal_list().c(d!())
     }
 
-    /// NOTE: system usage only
+    /// NOTE: native usage only
     pub fn governance_with_each_block(
         &mut self,
         governances: Vec<Punishment>,

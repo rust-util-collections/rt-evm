@@ -47,10 +47,12 @@ pub struct Staking {
 }
 
 impl Staking {
+    /// NOTE: native usage only
     pub fn new_default() -> Result<Self> {
         Self::new(None, None, None, None).c(d!())
     }
 
+    /// NOTE: native usage only
     pub fn new(
         score_max: Option<Score>,
         score_min_for_offline: Option<Score>,
@@ -427,7 +429,7 @@ impl Staking {
         Ok(())
     }
 
-    /// NOTE: system usage only
+    /// NOTE: native usage only
     pub fn governance_with_each_block(
         &mut self,
         governances: Vec<Punishment>,
