@@ -311,11 +311,7 @@ impl<Adapter: APIAdapter + 'static> RTEvmWeb3RpcServer for Web3RpcImpl<Adapter> 
         if resp.exit_reason.is_succeed() {
             // This parameter is used as the divisor and cannot be 0
             let gas_limit = if let Some(gas) = req.gas.as_ref() {
-                alt!(
-                    gas.to_owned() > U256::from(u32::MAX),
-                    u32::MAX,
-                    gas.as_u32()
-                ) as u64
+                alt!(*gas > U256::from(u32::MAX), u32::MAX, gas.as_u32()) as u64
             } else {
                 u32::MAX as u64
             };

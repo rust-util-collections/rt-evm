@@ -140,17 +140,17 @@ impl APIAdapter for DefaultAPIAdapter {
             .storage_root;
 
             if storage_root != NIL_HASH {
-                if let Ok(storage_trie_tree) =
-                    self.trie_db
-                        .trie_restore(addr.as_bytes(), None, storage_root.into())
+                if let Ok(storage_trie_tree) = self
+                    .trie_db
+                    .trie_restore(addr.as_bytes(), storage_root.into())
                 {
-                    let idx = Hasher::digest(&encode(&[
+                    let idx = Hasher::digest(encode(&[
                         Token::Address(address),
                         Token::Uint(*BALANCE_SLOT.get().c(d!())?),
                     ]));
-                    storage_trie_tree.get(idx.as_bytes())?.map(|balance| {
-                        account.balance = H256::from_slice(&balance).into_uint()
-                    });
+                    if let Some(balance) = storage_trie_tree.get(idx.as_bytes())? {
+                        account.balance = H256::from_slice(&balance).into_uint();
+                    }
                 };
             }
         }
@@ -186,7 +186,7 @@ impl APIAdapter for DefaultAPIAdapter {
             .map(|gas| gas.as_u64())
             .unwrap_or(MAX_BLOCK_GAS_LIMIT);
 
-        Ok(RTEvmExecutor::default().call(&backend, gas_limit, from, to, value, data))
+        Ok(RTEvmExecutor.call(&backend, gas_limit, from, to, value, data))
     }
 
     async fn get_code_by_hash(&self, hash: &Hash) -> Result<Option<Vec<u8>>> {

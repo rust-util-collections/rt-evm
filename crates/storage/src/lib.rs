@@ -8,7 +8,6 @@ pub use FunStorage as Storage;
 
 use ethabi::{encode, ethereum_types::BigEndianHash, Token};
 use moka::sync::Cache as Lru;
-use once_cell::sync::Lazy;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rt_evm_model::{
@@ -21,8 +20,8 @@ use rt_evm_model::{
 };
 use ruc::*;
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
-use trie_db::{MptOnce, TrieRoot};
+use std::{sync::Arc, time::Duration};
+use trie_db::MptOnce;
 use vsdb::{MapxOrd, MapxRaw};
 
 const BATCH_LIMIT: usize = 1000;
@@ -403,15 +402,15 @@ pub fn get_account_by_backend(
                 let storage_root = get_account_by_state(&state, *addr)?.storage_root;
                 if storage_root != NIL_HASH {
                     if let Ok(storage_trie_tree) =
-                        trie_db.trie_restore(addr.as_bytes(), None, storage_root.into())
+                        trie_db.trie_restore(addr.as_bytes(), storage_root.into())
                     {
-                        let idx = Hasher::digest(&encode(&[
+                        let idx = Hasher::digest(encode(&[
                             Token::Address(address),
                             Token::Uint(*BALANCE_SLOT.get().c(d!())?),
                         ]));
-                        storage_trie_tree.get(idx.as_bytes())?.map(|balance| {
-                            account.balance = H256::from_slice(&balance).into_uint()
-                        });
+                        if let Some(balance) = storage_trie_tree.get(idx.as_bytes())? {
+                            account.balance = H256::from_slice(&balance).into_uint();
+                        };
                     };
                 }
             }
@@ -421,7 +420,7 @@ pub fn get_account_by_backend(
 }
 
 pub fn get_account_by_state(state: &MptOnce, address: H160) -> Result<Account> {
-    match get_with_cache(state, address.as_bytes()).c(d!())? {
+    match state.get(address.as_bytes()).c(d!())? {
         Some(bytes) => Account::decode(bytes).c(d!()),
         None => Ok(Account {
             nonce: U256::zero(),
@@ -455,48 +454,4 @@ pub fn save_account_by_state(
         .encode()
         .c(d!())
         .and_then(|acc| state.insert(address.as_bytes(), &acc).c(d!()))
-}
-
-static QUERY_CACHE: Lazy<RwLock<BTreeMap<(TrieRoot, Vec<u8>), Option<Vec<u8>>>>> =
-    Lazy::new(|| RwLock::new(Default::default()));
-
-pub fn get_with_cache(state: &MptOnce, key: &[u8]) -> Result<Option<Vec<u8>>> {
-    let root = state.root();
-    let res = state.get(key);
-    if res.is_ok() {
-        let val = res.as_ref().unwrap();
-        QUERY_CACHE
-            .write()
-            .insert((root, key.to_vec()), val.to_owned());
-        return res;
-    } else {
-        let read = QUERY_CACHE.read();
-        let val = read.get(&(root, key.to_vec()));
-        if val.is_some() {
-            println!("get_with_cache success: {:?}", res);
-            return Ok(val.unwrap().to_owned());
-        }
-        println!("get_with_cache failed: {:?}", res);
-    }
-    res
-}
-
-pub fn remove_with_cache(state: &mut MptOnce, key: &[u8]) -> Result<()> {
-    state.remove(key).map(|v| {
-        let root = state.root();
-        QUERY_CACHE.write().remove(&(root, key.to_owned()));
-        v
-    })
-}
-
-pub fn insert_with_cache(state: &mut MptOnce, key: &[u8], value: &[u8]) -> Result<()> {
-    state.insert(key, value).map(|v| {
-        let root = state.root();
-        if QUERY_CACHE.read().get(&(root, key.to_owned())).is_some() {
-            QUERY_CACHE
-                .write()
-                .insert((root, key.to_owned()), Some(value.to_owned()));
-        }
-        v
-    })
 }
