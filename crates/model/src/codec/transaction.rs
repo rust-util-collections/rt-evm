@@ -146,7 +146,7 @@ impl Eip2930Transaction {
     ) {
         let rlp_stream_len = if signature.is_some() { 11 } else { 8 };
         rlp.begin_list(rlp_stream_len)
-            .append(&(if let Some(id) = chain_id { id } else { 0 }))
+            .append(&chain_id.unwrap_or(0))
             .append(&self.nonce)
             .append(&self.gas_price)
             .append(&self.gas_limit)
@@ -218,7 +218,7 @@ impl Eip1559Transaction {
     ) {
         let rlp_stream_len = if signature.is_some() { 12 } else { 9 };
         rlp.begin_list(rlp_stream_len)
-            .append(&(if let Some(id) = chain_id { id } else { 0 }))
+            .append(&chain_id.unwrap_or(0))
             .append(&self.nonce)
             .append(&self.max_priority_fee_per_gas)
             .append(&self.gas_price)

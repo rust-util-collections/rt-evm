@@ -167,7 +167,7 @@ impl TinyMempool {
         self.address_pending_cnter
             .write()
             .entry(tx.sender)
-            .or_insert(map! {})
+            .or_default()
             .insert(tx.transaction.hash, idx);
 
         self.tx_lifetime_fields
